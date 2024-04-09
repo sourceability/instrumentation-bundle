@@ -11,6 +11,7 @@ use Symfony\Component\Messenger\Event\WorkerMessageHandledEvent;
 use Symfony\Component\Messenger\Event\WorkerMessageReceivedEvent;
 use Symfony\Component\Messenger\Event\WorkerStartedEvent;
 use Symfony\Component\Messenger\Exception\HandlerFailedException;
+use Symfony\Component\Messenger\Exception\WrappedExceptionsInterface;
 
 class MessengerProfilerListener implements EventSubscriberInterface
 {
@@ -48,19 +49,21 @@ class MessengerProfilerListener implements EventSubscriberInterface
     {
         $throwable = $event->getThrowable();
 
-        if ($throwable instanceof HandlerFailedException) {
-            $nestedExceptions = [];
+        $nestedExceptions = [];
 
-            if (method_exists($throwable, 'getNestedExceptions')) {
-                $nestedExceptions = $throwable->getNestedExceptions();
-            } elseif (method_exists($throwable, 'getWrappedExceptions')) {
-                $nestedExceptions = $throwable->getWrappedExceptions();
-            }
-
-            $firstNestedException = reset($nestedExceptions);
-
-            $throwable = false !== $firstNestedException ? $firstNestedException : $throwable;
+        if (interface_exists(WrappedExceptionsInterface::class)
+            && $throwable instanceof WrappedExceptionsInterface
+        ) {
+            $nestedExceptions = $throwable->getWrappedExceptions();
+        } elseif ($throwable instanceof HandlerFailedException
+            && method_exists($throwable, 'getNestedExceptions')
+        ) {
+            $nestedExceptions = $throwable->getNestedExceptions();
         }
+
+        $firstNestedException = reset($nestedExceptions);
+
+        $throwable = false !== $firstNestedException ? $firstNestedException : $throwable;
 
         $this->profiler->stop($throwable);
     }

@@ -8,6 +8,7 @@ use Sourceability\Instrumentation\Profiler\ProfilerInterface;
 use Symfony\Component\HttpFoundation\RequestStack;
 use Symfony\Component\Messenger\Envelope;
 use Symfony\Component\Messenger\Exception\HandlerFailedException;
+use Symfony\Component\Messenger\Exception\WrappedExceptionsInterface;
 use Symfony\Component\Messenger\Middleware\MiddlewareInterface;
 use Symfony\Component\Messenger\Middleware\StackInterface;
 use Symfony\Component\Messenger\Stamp\ReceivedStamp;
@@ -62,9 +63,20 @@ class ProfilerMiddleware implements MiddlewareInterface
             return $stack->next()
                 ->handle($envelope, $stack)
             ;
-        } catch (HandlerFailedException $exception) {
-            if ($shouldStop) {
+        } catch (\Exception $exception) {
+            $nestedExceptions = null;
+
+            if (interface_exists(WrappedExceptionsInterface::class)
+                && $exception instanceof WrappedExceptionsInterface
+            ) {
+                $nestedExceptions = $exception->getWrappedExceptions();
+            } elseif ($exception instanceof HandlerFailedException
+                && method_exists($exception, 'getNestedExceptions')
+            ) {
                 $nestedExceptions = $exception->getNestedExceptions();
+            }
+
+            if ($shouldStop && null !== $nestedExceptions) {
                 $firstNestedException = reset($nestedExceptions);
 
                 $this->profiler->stop(false !== $firstNestedException ? $firstNestedException : $exception);

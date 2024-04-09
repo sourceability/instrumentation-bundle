@@ -19,6 +19,10 @@ parameters:
           reportUnmatched: false
         - message: '#Call to deprecated method getMasterRequest\(\) of class Symfony\\Component\\HttpFoundation\\RequestStack#'
           reportUnmatched: false
+        - message: '#Call to deprecated method getNestedExceptions.+#'
+          reportUnmatched: false
+        - message: '#Call to function method_exists\(\) with Symfony\\Component\\Messenger\\Exception\\HandlerFailedException and .getNestedExceptions. will always evaluate to true.#'
+          reportUnmatched: false
 
     scanDirectories:
         - vendor/datadog/dd-trace/src/DDTrace/
