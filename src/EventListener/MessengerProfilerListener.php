@@ -49,7 +49,14 @@ class MessengerProfilerListener implements EventSubscriberInterface
         $throwable = $event->getThrowable();
 
         if ($throwable instanceof HandlerFailedException) {
-            $nestedExceptions = $throwable->getNestedExceptions();
+            $nestedExceptions = [];
+
+            if (method_exists($throwable, 'getNestedExceptions')) {
+                $nestedExceptions = $throwable->getNestedExceptions();
+            } elseif (method_exists($throwable, 'getWrappedExceptions')) {
+                $nestedExceptions = $throwable->getWrappedExceptions();
+            }
+
             $firstNestedException = reset($nestedExceptions);
 
             $throwable = false !== $firstNestedException ? $firstNestedException : $throwable;
